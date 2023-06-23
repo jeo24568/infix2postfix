@@ -33,11 +33,11 @@ int main(void) {
         
         inputLen = (int)strlen(input);
 
-            if ((int)strlen(input) > 100) {
-                printf("Too long expression\n");
-                fflush(stdin);
-                continue;
-            }
+        if ((int)strlen(input) > 100) {
+            printf("Too long expression\n");
+            fflush(stdin);
+            continue;
+        }
         // 종료
         if (strcmp(end, input) == 0) {
             printf("종료됨\n");

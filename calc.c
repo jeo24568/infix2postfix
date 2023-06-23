@@ -1,7 +1,15 @@
+//
+//  calc.c
+//  DataStructure_Project02
+//
+//  Created by 김재환 on 2023/06/04.
+//
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <float.h>
 #include <math.h>
 
 #include "calc.h"
@@ -112,11 +120,13 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                 break;
             case '+':
             case '-':
+                // 단항 연산자로 처리되는 경우 바로앞에 연산자가 오는경우의 예외처리
+                if (input[i - 1] == '+'|| input[i - 1] == '-' || input[i - 1] == '*' || input[i - 1] == '/' || input[i - 1] == '^') {
+                    return WRONG_INPUT_ERROR;
+                }
                 // 단항 연산자로 처리되는 경우
                 if ((i == 0 || (input[i - 1] < '0' || input[i - 1] > '9')) && input[i + 1] >= '0' && input[i + 1] <= '9') {
-                    if (input[i - 1] == '+'|| input[i - 1] == '-' || input[i - 1] == '*' || input[i - 1] == '/' || input[i - 1] == '^') {
-                        return WRONG_INPUT_ERROR;
-                    }
+                    
                     int j = i + 1;
                     while (j < LENGTH && input[j] >= '0' && input[j] <= '9') {
                         j++;
@@ -133,7 +143,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                     }
 
                     Enque(&front, num); // long 값을 enqueue
-                    isOperator[cntQ] = 0;  //isOperator에 0을 할당하여 피연산자를 나타냄
+                    isOperator[cntQ] = 0;
                     cntQ++;
                     cntOpnd++;
 
@@ -185,7 +195,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                 }
                 break;
             default:
-                // Check log operators
+                // Check for log operators
                 if (i < LENGTH - 2 && input[i] == 'l' && input[i + 1] == 'o' && input[i + 2] == 'g') {
                     i += 2;
                     if (i < LENGTH - 1 && input[i + 1] == '2') {
@@ -269,7 +279,8 @@ int opPrecedence(char op) {
 
 // MARK: 계산기
 ErrorCode Calculator(double a, double b, char op, double* result) {
-    long i;
+    int i;
+    int sign_flag = 0;
     switch(op) {
         case '+':
             *result = a + b;
@@ -299,17 +310,26 @@ ErrorCode Calculator(double a, double b, char op, double* result) {
             *result = (long)a % (long)b;
             break;
         case '^':
+            sign_flag = 0;
+            if (b != (long)b) { return WRONG_INPUT_ERROR; } // b가 정수가 아닌 경우 오류 반환
+            if (a < 0) { sign_flag = 1; a *= -1; }
             if (b < 0) {
-                return WRONG_INPUT_ERROR;
-            }
-            *result = 1;
-            for (i = 0; i < b; i++) {
-                // 값 표현범위 넘어서는지 검사
-                if (*result > LONG_MAX / a) {
-                    return OUT_OF_RANGE;
+                if (a == 0) { return DIVISION_BY_ZERO_ERROR; } // 0을 0으로 나누려고 할 때 오류 반환
+                *result = 1;
+                for (i = 0; i > b; i--) {
+                    // 값 표현범위 넘어서는지 검사
+                    if (*result < LONG_MIN / a) { return OUT_OF_RANGE; }
+                    *result /= a;
                 }
-                *result *= a;
+            } else {
+                *result = 1;
+                for (i = 0; i < b; i++) {
+                    // 값 표현범위 넘어서는지 검사
+                    if (*result > LONG_MAX / a) { return OUT_OF_RANGE; }
+                    *result *= a;
+                }
             }
+            if (sign_flag == 1) { *result *= -1; }
             break;
         case '@': // log2
             if (a <= 0) {
@@ -345,6 +365,7 @@ ErrorCode cal(Queue** qf, Stack** st, double* resultPtr, char input[]) {
     
     tmp = In2Post(input, OperandPtr, OperatorPtr);
     if (tmp != NO_ERROR) {return tmp;}
+//    if (cntOperand != cntOperator+1) {return WRONG_INPUT_ERROR;} // 단항연산자 예외처리
     if (cntOperator == 0) {return WRONG_INPUT_ERROR;}
     
     long i, op;
