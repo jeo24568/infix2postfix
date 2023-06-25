@@ -16,7 +16,7 @@
 #include "stack.h"
 #include "queue.h"
 
-int isOperator[100] = {0};
+int opFlag[100] = {0};
 int cntQ = 0;
 
 // MARK: 괄호쌍 검사
@@ -101,7 +101,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                 return OUT_OF_RANGE; // 변환 중 오류가 발생하거나 범위를 벗어난 경우
             }
             Enque(&front, num);
-            isOperator[cntQ] = 0;
+            opFlag[cntQ] = 0;
             cntQ++;
             cntOpnd++;
         }
@@ -112,7 +112,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
             case ')':
                 while (Top(&st) != '(') {
                     Enque(&front, Top(&st));
-                    isOperator[cntQ] = 1;
+                    opFlag[cntQ] = 1;
                     cntQ++;
                     Pop(&st);
                 }
@@ -143,7 +143,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                     }
 
                     Enque(&front, num); // long 값을 enqueue
-                    isOperator[cntQ] = 0;
+                    opFlag[cntQ] = 0;
                     cntQ++;
                     cntOpnd++;
 
@@ -161,7 +161,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                         if (opPrecedence(Top(&st)) >= opPrecedence(input[i])) {
                             Enque(&front, Top(&st));
                             Pop(&st);
-                            isOperator[cntQ] = 1;
+                            opFlag[cntQ] = 1;
                             cntQ++;
                             i--;
                         } else {
@@ -185,7 +185,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                     if (opPrecedence(Top(&st)) >= opPrecedence(input[i])) {
                         Enque(&front, Top(&st));
                         Pop(&st);
-                        isOperator[cntQ] = 1;
+                        opFlag[cntQ] = 1;
                         cntQ++;
                         i--;
                     } else {
@@ -207,7 +207,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                             if (opPrecedence(Top(&st)) >= opPrecedence('@')) {
                                 Enque(&front, '@');
                                 Pop(&st);
-                                isOperator[cntQ] = 1;
+                                opFlag[cntQ] = 1;
                                 cntQ++;
                             } else {
                                 Push(&st, '@');
@@ -226,7 +226,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
                             if (opPrecedence(Top(&st)) >= opPrecedence('#')) {
                                 Enque(&front, '#');
                                 Pop(&st);
-                                isOperator[cntQ] = 1;
+                                opFlag[cntQ] = 1;
                                 cntQ++;
                                 i += 2;
                             } else {
@@ -245,7 +245,7 @@ ErrorCode In2Post(char* input, int* cntOperand, int* cntOperator) {
     // stack에 남은 연산자들 모두 enqueue
     while (!IsStackEmpty(&st)) {
         Enque(&front, Top(&st));
-        isOperator[cntQ] = 1;
+        opFlag[cntQ] = 1;
         cntQ++;
         Pop(&st);
     }
@@ -355,27 +355,28 @@ ErrorCode Calculator(double a, double b, char op, double* result) {
 ErrorCode cal(Queue** qf, Stack** st, double* resultPtr, char input[]) {
     ErrorCode tmp = NO_ERROR;
     int cntOperator = 0, cntOperand = 0;
-    int* OperatorPtr = &cntOperator;
-    int* OperandPtr = &cntOperand;
+    int* cntOperatorPtr = &cntOperator;
+    int* cntOperandPtr = &cntOperand;
+    
+    long i, op;
+    double a, b;
+    int len;
         
     tmp = CheckBalance(input);
     if (tmp != NO_ERROR) {return tmp;} // 괄호쌍 예외처리
     tmp = CheckExpression(input);
     if (tmp != NO_ERROR) {return tmp;} // 잘못된 입력 예외처리
     
-    tmp = In2Post(input, OperandPtr, OperatorPtr);
+    tmp = In2Post(input, cntOperandPtr, cntOperatorPtr);
     if (tmp != NO_ERROR) {return tmp;}
-//    if (cntOperand != cntOperator+1) {return WRONG_INPUT_ERROR;} // 단항연산자 예외처리
     if (cntOperator == 0) {return WRONG_INPUT_ERROR;}
     
-    long i, op;
-    double a, b;
-    int len = QueLength(&front);
+    len = QueLength(&front);
     
     for (i=0; i<len; i++) {
         op = (*qf)->data;
-        // 연산자 -> stack pop 2번 -> calculator -> result push
-        if (isOperator[i] == 1 && (op == '@' || op == '#')) {
+        // 연산자 -> stack pop 1번 -> calculator -> result push
+        if (opFlag[i] == 1 && (op == '@' || op == '#')) {
             if (IsStackEmpty(st)) { return WRONG_INPUT_ERROR;}
             a = Top(st);
             Pop(st);
@@ -384,7 +385,8 @@ ErrorCode cal(Queue** qf, Stack** st, double* resultPtr, char input[]) {
             Deque(qf);
             Push(st, *resultPtr);
         }
-        else if (isOperator[i] == 1 && (op == '+' || op == '-' || op == '*' || op == '/' ||
+        // 연산자 -> stack pop 2번 -> calculator -> result push
+        else if (opFlag[i] == 1 && (op == '+' || op == '-' || op == '*' || op == '/' ||
             op == '%' || op == '^')) {
             if (IsStackEmpty(st)) { return WRONG_INPUT_ERROR;}
             b = Top(st);
