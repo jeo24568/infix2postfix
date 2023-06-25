@@ -1,10 +1,3 @@
-//
-//  calc.c
-//  DataStructure_Project02
-//
-//  Created by 김재환 on 2023/06/04.
-//
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
